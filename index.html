@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WhatsApp Export Reader</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Helvetica, Arial, sans-serif;
+      }
+
+      body {
+        background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+        padding: 20px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+      }
+
+      .chat-container {
+        width: 100%;
+        max-width: 800px;
+        height: 90vh;
+        background: #f0f2f5;
+        border-radius: 24px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        transition: all 0.3s ease;
+      }
+
+      .chat-header {
+        background: #075e54;
+        color: white;
+        padding: 20px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        border-bottom: none;
+      }
+
+      .chat-header h2 {
+        font-size: 1.4rem;
+        font-weight: 600;
+      }
+
+      #chat-content {
+        flex: 1;
+        padding: 20px;
+        overflow-y: auto;
+        background: #e5ddd5;
+        scroll-behavior: smooth;
+      }
+
+      #chat-content::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      #chat-content::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      #chat-content::-webkit-scrollbar-thumb {
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 3px;
+      }
+
+      .message {
+        display: block;
+        width: 100%;
+        margin-bottom: 12px;
+        animation: messageSlide 0.3s ease forwards;
+        opacity: 0;
+        transform: translateY(20px);
+      }
+
+      @keyframes messageSlide {
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .message.received {
+        text-align: left;
+      }
+
+      .message.sent {
+        text-align: right;
+      }
+
+      .message-bubble {
+        display: inline-block;
+        max-width: 65%;
+        padding: 8px 16px;
+        border-radius: 12px;
+        position: relative;
+        word-wrap: break-word;
+        line-height: 1.5;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        transition: all 0.2s ease;
+        text-align: left;
+      }
+
+      .message-bubble:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+      }
+
+      .received .message-bubble {
+        background-color: #ffffff;
+        border-top-left-radius: 4px;
+      }
+
+      .sent .message-bubble {
+        background-color: #e1ffc7;
+        border-top-right-radius: 4px;
+      }
+
+      .message-info {
+        font-size: 0.9rem;
+        color: #128c7e;
+        margin-bottom: 4px;
+        font-weight: 600;
+      }
+
+      .message-text {
+        font-size: 0.95rem;
+        color: #111;
+        margin-top: 2px;
+        line-height: 1.4;
+        word-break: break-word;
+      }
+
+      .timestamp {
+        font-size: 0.75rem;
+        color: #667781;
+        margin-top: 4px;
+        text-align: right;
+      }
+
+      .input-container {
+        padding: 16px 24px;
+        background-color: #ffffff;
+        border-top: 1px solid rgba(0, 0, 0, 0.08);
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+
+      .input-container label {
+        font-weight: 600;
+        color: #128c7e;
+      }
+
+      input[type="file"] {
+        flex: 1;
+        padding: 8px;
+        border: 2px dashed #25d366;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      input[type="file"]:hover {
+        border-color: #128c7e;
+        background-color: rgba(37, 211, 102, 0.05);
+      }
+
+      .toggle-container {
+        padding: 12px;
+        background-color: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        border-top: 1px solid rgba(0, 0, 0, 0.08);
+      }
+
+      .toggle-container label {
+        color: #128c7e;
+        font-weight: 600;
+      }
+
+      input[type="checkbox"] {
+        width: 40px;
+        height: 20px;
+        appearance: none;
+        background-color: #dce1e6;
+        border-radius: 20px;
+        position: relative;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+
+      input[type="checkbox"]::before {
+        content: "";
+        position: absolute;
+        width: 16px;
+        height: 16px;
+        background-color: white;
+        border-radius: 50%;
+        top: 2px;
+        left: 2px;
+        transition: all 0.3s ease;
+      }
+
+      input[type="checkbox"]:checked {
+        background-color: #25d366;
+      }
+
+      input[type="checkbox"]:checked::before {
+        transform: translateX(20px);
+      }
+
+      .status-message {
+        text-align: center;
+        padding: 20px;
+        color: #128c7e;
+        font-weight: 500;
+      }
+
+      @media (max-width: 768px) {
+        body {
+          padding: 0;
+        }
+
+        .chat-container {
+          height: 100vh;
+          border-radius: 0;
+        }
+
+        .message-bubble {
+          max-width: 80%;
+        }
+
+        .chat-header {
+          padding: 15px;
+        }
+
+        .input-container {
+          padding: 12px;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        input[type="file"] {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="chat-container">
+      <div class="chat-header">
+        <h2>WhatsApp Export Reader</h2>
+      </div>
+      <div class="input-container">
+        <label>Choose WhatsApp Export File:</label>
+        <input type="file" id="fileInput" accept=".txt" placeholder="file" />
+        <div class="toggle-container">
+          <label>Switch Perspective</label>
+          <input type="checkbox" id="toggleSender" placeholder="Perspectives" />
+        </div>
+      </div>
+      <div id="chat-content">
+        <div class="status-message">
+          Choose a WhatsApp export file (.txt) to view messages
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let senderName = "";
+      let isToggled = false;
+      let messages = [];
+
+      document
+        .getElementById("fileInput")
+        .addEventListener("change", async function (event) {
+          const file = event.target.files[0];
+          const chatContent = document.getElementById("chat-content");
+
+          if (!file) {
+            chatContent.innerHTML =
+              '<div class="status-message">No file selected</div>';
+            return;
+          }
+
+          if (!file.name.endsWith(".txt")) {
+            chatContent.innerHTML =
+              '<div class="status-message">Please select a valid .txt file</div>';
+            return;
+          }
+
+          try {
+            const text = await file.text();
+            processMessages(text);
+            if (messages.length === 0) {
+              chatContent.innerHTML =
+                '<div class="status-message">No valid messages found in the file</div>';
+            } else {
+              displayMessages();
+            }
+          } catch (error) {
+            console.error("Error reading file:", error);
+            chatContent.innerHTML =
+              '<div class="status-message">Error reading file. Please try again.</div>';
+          }
+        });
+
+      document
+        .getElementById("toggleSender")
+        .addEventListener("change", (e) => {
+          isToggled = e.target.checked;
+          if (messages.length > 0) {
+            displayMessages();
+          }
+        });
+
+      function processMessages(text) {
+        const lines = text.split("\n");
+        let startIndex = 0;
+
+        // Skip metadata lines
+        while (
+          startIndex < lines.length &&
+          !isValidMessageLine(lines[startIndex])
+        ) {
+          startIndex++;
+        }
+
+        messages = [];
+        senderName = ""; // Reset sender name
+
+        for (let i = startIndex; i < lines.length; i++) {
+          const line = lines[i].trim();
+          if (!line) continue;
+
+          const match = line.match(
+            /^(\d{1,2}\/\d{1,2}\/\d{2,4},?\s\d{1,2}:\d{2}(?::\d{2})?(?:\s?[AaPp][Mm])?)\s-\s([^:]+):\s(.+)$/
+          );
+
+          if (match) {
+            const [, timestamp, sender, messageText] = match;
+            if (!senderName) senderName = sender.trim();
+
+            messages.push({
+              sender: sender.trim(),
+              messageText: messageText.trim(),
+              timestamp: timestamp.trim(),
+            });
+          }
+        }
+      }
+
+      function isValidMessageLine(line) {
+        return /^\d{1,2}\/\d{1,2}\/\d{2,4}/.test(line);
+      }
+
+      function displayMessages() {
+        const chatContent = document.getElementById("chat-content");
+        chatContent.innerHTML = "";
+
+        messages.forEach(({ sender, messageText, timestamp }, index) => {
+          const isSenderView = isToggled
+            ? sender !== senderName
+            : sender === senderName;
+          const messageDiv = document.createElement("div");
+          messageDiv.className = `message ${
+            isSenderView ? "sent" : "received"
+          }`;
+          messageDiv.style.animationDelay = `${index * 0.05}s`;
+
+          messageDiv.innerHTML = `
+            <div class="message-bubble">
+              <div class="message-info">${sender}</div>
+              <div class="message-text">${messageText}</div>
+              <div class="timestamp">${timestamp}</div>
+            </div>
+          `;
+          chatContent.appendChild(messageDiv);
+        });
+
+        // Scroll to bottom after messages are displayed
+        // setTimeout(() => {
+        //   chatContent.scrollTop = chatContent.scrollHeight;
+        // }, 100);
+      }
+    </script>
+  </body>
+</html>
